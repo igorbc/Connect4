@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<stdlib.h>
 #include<string.h>
 #include<math.h>
 
@@ -6,6 +7,9 @@
 #define P2_WINS -1
 #define DRAW 0
 #define ACTIVE_GAME 2
+
+#define WIN 0
+#define MAC 1
 
 const int rows = 6;
 const int columns = 7;
@@ -15,7 +19,7 @@ int counter;
 int timebank, time_per_move, your_botid, game_round, time_left;
 char line[1000], player_names[1000], your_bot[1000], field[1000];
 int level = 0;
-int max_level = 2;
+int max_level = 7;
 
 typedef enum {min_player = -1, blank = 0, max_player = 1} t_player;
 
@@ -33,9 +37,20 @@ typedef struct
 
 s_state state;
 
+int const PLATFORM = MAC;
+int is_terminal(s_state s);
+void compute_utility(s_state *s);
+int successors(s_state *s, t_player p, s_state *successor);
+int max_value(s_state s, int *action);
+int min_value(s_state s, int *action);
+
 char value_to_char(int value)
 {
-    return (value == 1) ? 2 : (value == 0) ? 250 : 1;
+    if (PLATFORM == WIN)
+        return (value == 1) ? 2 : (value == 0) ? 250 : 1;
+    else
+        return (value == 1) ? 'O' : (value == 0) ? '.' : 'X';
+
 }
 
 void print_gamefield(s_state state)
@@ -55,7 +70,7 @@ void print_gamefield(s_state state)
 
 void print_is_terminal(){
 
-    switch(is_terminal(state.s))
+    switch(is_terminal(state))
     {
     case DRAW:
         printf("game ended in a draw\n");
@@ -163,7 +178,7 @@ void update_four_array(s_state *s)
     }
 }
 
-int print_four_array(s_state s)
+void print_four_array(s_state s)
 {
     int i;
     int (*fa)[4];
@@ -213,14 +228,14 @@ int print_four_array(s_state s)
 
 }
 
-int process_state(s_state *s)
+void process_state(s_state *s)
 {
     s->action = 0;
     update_four_array(s);
     compute_utility(s);
 }
 
-int compute_utility(s_state *s)
+void compute_utility(s_state *s)
 {
     int i;
     int four_utility;
@@ -230,9 +245,9 @@ int compute_utility(s_state *s)
     for(i = 0; i < 69; i++)
     {
         if(s->four_sum[i] < 0)
-            four_utility = -1*pow(3,(-1*s->four_sum[i]));
+            four_utility = -1*pow(3,(-1*(s->four_sum[i])*2));
         else if(s->four_sum[i] > 0)
-            four_utility = pow(3,s->four_sum[i]);
+            four_utility = pow(3,(s->four_sum[i]*2));
         else
             four_utility = 0;
 
@@ -277,9 +292,8 @@ int min_value(s_state s, int *action){
         return utility(s);
     }
 
-    if(!(is_terminal(s) == ACTIVE_GAME)){
-        *action = s.action;
-
+    if(!(is_terminal(s) == ACTIVE_GAME))
+    {
         return	utility(s);
     }
 
@@ -317,8 +331,8 @@ int max_value(s_state s, int *action)
         return utility(s);
     }
 
-    if(!(is_terminal(s) == ACTIVE_GAME)){
-        *action = s.action;
+    if(!(is_terminal(s) == ACTIVE_GAME))
+    {
         return utility(s);
     }
 
@@ -377,7 +391,8 @@ void play()
 void print_ascii()
 {
     int i;
-    for(i = 0; i < 256; printf("%c %d\n", i++, i));
+    for(i = 0; i < 256; i++)
+    	printf("%c %d\n", (char)i, i);
 }
 
 void initialize_settings()
@@ -387,7 +402,6 @@ void initialize_settings()
     strcpy(player_names,"player1,player2");
     strcpy(your_bot,"player1");
     your_botid = 1;
-    srand(time(NULL));
 }
 
 void copy_state(s_state *dest, s_state *orig)
@@ -450,6 +464,7 @@ void place_disk(col, p)
     for(i = 0; i < rows; i++){
         if(state.s[i][col] == 0){
             state.s[i][col] = p;
+            print_gamefield(state);
             return;
         }
     }
