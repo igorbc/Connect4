@@ -21,7 +21,7 @@ int debug = 0;
 int timebank, time_per_move, your_botid, game_round, time_left;
 char line[1000], player_names[1000], your_bot[1000], field[1000];
 int level = 0;
-int max_level = 8;
+int max_level = 6;
 
 int eval[4] = {1, 10, 100, 1000};
 
@@ -329,8 +329,6 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
     int terminal_status = is_terminal(s);
     if(terminal_status != ACTIVE_GAME)
     {
-
-
         if (terminal_status == DRAW)
         {
             return 0;
@@ -353,7 +351,6 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
             v = current_min;
             *action = s.action;
 
-
             if(debug)
                 printf("new min: %d (action eh %d)\n", v, s.action -1);
             //copy_state(cs, &successor);
@@ -361,11 +358,10 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
             //printf("\nutility %d\n", v);
             //print_gamefield(successor, level);
 
-            if (v <= alpha)
-                return v;
-
+       //     if (v <= alpha)
+       //         return v;
         }
-        beta = (v < beta)? v: beta;
+       // beta = (v < beta)? v: beta;
     }
 
     return	v;
@@ -392,15 +388,12 @@ int max_value(s_state s, int *action, int alpha, int beta, int *lv)
     int terminal_status = is_terminal(s);
     if(terminal_status != ACTIVE_GAME)
     {
-
-
         if (terminal_status == DRAW)
         {
             return 0;
         }
         else
         {
-            //printf("P1_WIN level %d\n", level);
             return utility(s);
         }
     }
@@ -431,10 +424,10 @@ int max_value(s_state s, int *action, int alpha, int beta, int *lv)
             if (debug)
                 printf("new max: %d (action eh %d)\n", v, s.action -1);
 
-            if (v >= beta)
-                return v;
+            //if (v >= beta)
+            //    return v;
         }
-        alpha = (v > alpha)? v: alpha;
+        //alpha = (v > alpha)? v: alpha;
     }
     return	v;
 }
