@@ -21,7 +21,7 @@ int debug = 0;
 int timebank, time_per_move, your_botid, game_round, time_left;
 char line[1000], player_names[1000], your_bot[1000], field[1000];
 int level = 0;
-int max_level = 7;
+int max_level = 8;
 
 int eval[4] = {1, 10, 100, 1000};
 
@@ -48,8 +48,8 @@ int const PLATFORM = MAC;
 int is_terminal(s_state s);
 void compute_utility(s_state *s);
 int successors(s_state *s, t_player p, s_state *successor);
-int max_value(s_state s, int *action, int *alpha, int *beta, s_state *cs);
-int min_value(s_state s, int *action, int *alpha, int *beta, s_state *cs);
+int max_value(s_state s, int *action, int alpha, int beta, int *cs);
+int min_value(s_state s, int *action, int alpha, int beta, int *cs);
 void place_disk(int col, t_player p);
 void copy_state(s_state *dest, s_state *orig);
 void process_state(s_state *s);
@@ -310,83 +310,26 @@ int utility(s_state s){
     return s.utility;
 }
 
-int min_value(s_state s, int *action, int *alpha, int *beta, s_state *cs){
+int min_value(s_state s, int *action, int alpha, int beta, int *lv){
     s_state successor;
-
     int v = MAX;
     int current_min = MAX;
     int max_action;
+    int cur_best_level;
 
-
+    *lv = level;
     if (level >= max_level)
     {
         process_state(&s);
         return utility(s);
     }
 
-    int terminal_status = is_terminal(s);
-    if(terminal_status != ACTIVE_GAME)
-    {
-        process_state(&s);
-        if (terminal_status == P1_WINS){
-            return MAX;
-        }
-        else{
-            if (terminal_status == P2_WINS){
-                return -MAX;
-            }
-            else{
-                return 0;
-            }
-        }
-    }
-
-    while(successors(&s, min_player, &successor))
-    {
-        level++;
-        current_min = max_value(successor, &max_action, alpha, beta, cs);
-        level--;
-        if(current_min < v)
-        {
-            v = current_min;
-            *action = s.action;
-
-            if(debug)
-                printf("new min: %d (action eh %d)\n", v, s.action -1);
-//            if (v >= *beta)
-            //copy_state(cs, &successor);
-
-            //printf("\nutility %d\n", v);
-            //print_gamefield(successor, level);
-
- //           if (v >= *alpha)
- //               return v;
-
-        }
- //       *beta = (v > *beta)? v: *beta;
-    }
-
-    return	v;
-}
-
-int max_value(s_state s, int *action, int *alpha, int *beta, s_state *cs)
-{
-    s_state successor;
-
-    int v = -MAX;
-    int current_max = -MAX;
-    int min_action;
-
-    if (level >= max_level)
-    {
-        process_state(&s);
-        return utility(s);
-    }
+    process_state(&s);
 
     int terminal_status = is_terminal(s);
     if(terminal_status != ACTIVE_GAME)
     {
-        process_state(&s);
+
 
         if (terminal_status == DRAW)
         {
@@ -398,25 +341,100 @@ int max_value(s_state s, int *action, int *alpha, int *beta, s_state *cs)
         }
     }
 
+    while(successors(&s, min_player, &successor))
+    {
+        level++;
+        current_min = max_value(successor, &max_action, alpha, beta, lv);
+        level--;
+        if(current_min < v || (current_min == v && *lv < cur_best_level))
+        {
+            cur_best_level = *lv;
+
+            v = current_min;
+            *action = s.action;
+
+
+            if(debug)
+                printf("new min: %d (action eh %d)\n", v, s.action -1);
+            //copy_state(cs, &successor);
+
+            //printf("\nutility %d\n", v);
+            //print_gamefield(successor, level);
+
+            if (v <= alpha)
+                return v;
+
+        }
+        beta = (v < beta)? v: beta;
+    }
+
+    return	v;
+}
+
+int max_value(s_state s, int *action, int alpha, int beta, int *lv)
+{
+    s_state successor;
+
+    int v = -MAX;
+    int current_max = -MAX;
+    int min_action;
+    int cur_best_level;
+
+    *lv = level;
+
+    if (level >= max_level)
+    {
+        process_state(&s);
+        return utility(s);
+    }
+
+    process_state(&s);
+    int terminal_status = is_terminal(s);
+    if(terminal_status != ACTIVE_GAME)
+    {
+
+
+        if (terminal_status == DRAW)
+        {
+            return 0;
+        }
+        else
+        {
+            //printf("P1_WIN level %d\n", level);
+            return utility(s);
+        }
+    }
+
     while(successors(&s, max_player, &successor))
     {
         level++;
-        current_max = min_value(successor, &min_action, alpha, beta, cs);
+        current_max = min_value(successor, &min_action, alpha, beta, lv);
         level--;
-        if(current_max > v)
+        if(current_max > v || (current_max == v && *lv < cur_best_level))
         {
+
+            //if( (current_max == v && *lv < cur_best_level) && level == 0)
+            //    printf("level anterior: %d, novo: %d (valor %d)\n",cur_best_level, *lv, current_max);
+
+            cur_best_level = *lv;
             v = current_max;
             *action = s.action;
+
+            //if(level == 0)
+            //    printf("cur best level: %d\n", cur_best_level);
+
+
             //copy_state(cs, &successor);
             //printf("\nutility %d\n", v);
             //print_gamefield(successor, level);
 
             if (debug)
                 printf("new max: %d (action eh %d)\n", v, s.action -1);
-//            if (v >= *beta)
-//                return v;
+
+            if (v >= beta)
+                return v;
         }
-//        *alpha = (v > *alpha)? v: *alpha;
+        alpha = (v > alpha)? v: alpha;
     }
     return	v;
 }
@@ -455,23 +473,25 @@ void play(int mode)
     alpha = -MAX;
     beta = MAX;
 
+    int lv;
+
     switch(mode)
     {
         case 0:
-        u = max_value(state, &action, &alpha, &beta, &chosen_state);
+        u = max_value(state, &action, alpha, beta, &lv);
         //fprintf(stdout, "utility: %d\n", u);
         printf("place_disc %d\n", action-1);
         break;
 
         case max_player:
-        u = max_value(state, &action, &alpha, &beta, &chosen_state);
+        u = max_value(state, &action, alpha, beta, &lv);
         printf("col: %d utility: %d\n", action-1, u);
         place_disk(action-1, max_player);
         print_is_terminal();
         break;
 
         case min_player:
-        u = min_value(state, &action, &alpha, &beta, &chosen_state);
+        u = min_value(state, &action, alpha, beta, &lv);
         printf("col: %d utility: %d\n", action-1, u);
         place_disk(action-1, min_player);
         print_is_terminal();
