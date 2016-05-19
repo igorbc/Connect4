@@ -7,6 +7,7 @@
 #define P2_WINS -1
 #define DRAW 0
 #define ACTIVE_GAME 2
+#define MAX 69000;
 
 #define WIN 0
 #define MAC 1
@@ -15,11 +16,14 @@ const int rows = 6;
 const int columns = 7;
 
 int counter;
+int debug = 0;
 
 int timebank, time_per_move, your_botid, game_round, time_left;
 char line[1000], player_names[1000], your_bot[1000], field[1000];
 int level = 0;
 int max_level = 7;
+
+int eval[4] = {1, 10, 100, 1000};
 
 typedef enum {min_player = -1, blank = 0, max_player = 1} t_player;
 
@@ -31,18 +35,24 @@ typedef struct
     int action;
     int utility;
     int four_array[69][4];
+    int four_count[69][3];
     int four_sum[69];
+    int four_utility[69];
     int sum;
 } s_state;
 
 s_state state;
+s_state chosen_state;
 
 int const PLATFORM = MAC;
 int is_terminal(s_state s);
 void compute_utility(s_state *s);
 int successors(s_state *s, t_player p, s_state *successor);
-int max_value(s_state s, int *action);
-int min_value(s_state s, int *action);
+int max_value(s_state s, int *action, int *alpha, int *beta, s_state *cs);
+int min_value(s_state s, int *action, int *alpha, int *beta, s_state *cs);
+void place_disk(int col, t_player p);
+void copy_state(s_state *dest, s_state *orig);
+void process_state(s_state *s);
 
 char value_to_char(int value)
 {
@@ -53,13 +63,13 @@ char value_to_char(int value)
 
 }
 
-void print_gamefield(s_state state)
+void print_gamefield(s_state state, int level)
 {
-    int i, j;
-    printf("game:\n");
+    int i, j, k;
 
     for (i = rows-1; i >= 0; i--)
     {
+        for(k = 0; k < level; k++) printf("   ");
         for (j = 0; j < columns; j++)
         {
             printf(" %c", value_to_char(state.s[i][j]));
@@ -183,49 +193,28 @@ void print_four_array(s_state s)
     int i;
     int (*fa)[4];
 
-    update_four_array(&s);
+    process_state(&s);
 
     fa = s.four_array;
 
     printf("\nhorizontal\n");
-    for(i = 0; i < 24; i++)
+    for(i = 0; i < 69; i++)
     {
-        printf("%c %c %c %c sum: %d\n", value_to_char(fa[i][0]),
-                                   value_to_char(fa[i][1]),
-                                   value_to_char(fa[i][2]),
-                                   value_to_char(fa[i][3]),
-                                   s.four_sum[i]);
-    }
-    printf("\nvertical\n");
-    for(i = 24; i < 24+21; i++)
-    {
-        printf("%c %c %c %c sum: %d\n", value_to_char(fa[i][0]),
-                                   value_to_char(fa[i][1]),
-                                   value_to_char(fa[i][2]),
-                                   value_to_char(fa[i][3]),
-                                   s.four_sum[i]);
-    }
+        if (i == 24) printf("\nvertical\n");
+        if (i == 24+21) printf("\npositive diagonal\n");
+        if (i == 24+21+12) printf("\nnegative diagonal\n");
 
-    printf("\npositive diagonal\n");
-    for(i = 24+21; i < 24+21+12; i++)
-    {
-        printf("%c %c %c %c sum: %d\n", value_to_char(fa[i][0]),
+        printf("%c %c %c %c sum: %2d util: %4d (0 = %d, 1 = %d, -1 = %d) \n", value_to_char(fa[i][0]),
                                    value_to_char(fa[i][1]),
                                    value_to_char(fa[i][2]),
                                    value_to_char(fa[i][3]),
-                                   s.four_sum[i]);
+                                   s.four_sum[i],
+                                   s.four_utility[i],
+                                   s.four_count[i][0],
+                                   s.four_count[i][1],
+                                   s.four_count[i][2]);
     }
-
-    printf("\nnegative diagonal\n");
-    for(i = 24+21+12; i < 24+21+12+12; i++)
-    {
-        printf("%c %c %c %c sum: %d\n", value_to_char(fa[i][0]),
-                                   value_to_char(fa[i][1]),
-                                   value_to_char(fa[i][2]),
-                                   value_to_char(fa[i][3]),
-                                   s.four_sum[i]);
-    }
-
+    printf("total utility: %d\n", s.utility);
 }
 
 void process_state(s_state *s)
@@ -237,22 +226,66 @@ void process_state(s_state *s)
 
 void compute_utility(s_state *s)
 {
-    int i;
+    int i, j;
     int four_utility;
+    int end_game = 0;
 
     s->utility = 0;
 
     for(i = 0; i < 69; i++)
     {
-        if(s->four_sum[i] < 0)
-            four_utility = -1*pow(3,(-1*(s->four_sum[i])*2));
-        else if(s->four_sum[i] > 0)
-            four_utility = pow(3,(s->four_sum[i]*2));
-        else
-            four_utility = 0;
+        s->four_count[i][0] = s->four_count[i][1] = s->four_count[i][2] = 0;
 
+        for(j = 0; j < 4; j++)
+        {
+            switch(s->four_array[i][j])
+            {
+                case 0:
+                s->four_count[i][0]++;
+                break;
+
+                case max_player:
+                s->four_count[i][1]++;
+                break;
+
+                case min_player:
+                s->four_count[i][2]++;
+                break;
+            }
+
+            if(s->four_count[i][1] > 0 && s->four_count[i][2] > 0 )
+                four_utility = 0;
+            else
+            {
+                if(s->four_count[i][1] > 0)
+                {
+                    four_utility = eval[s->four_count[i][1]];
+                }
+                else if(s->four_count[i][2] > 0)
+                {
+                    four_utility = -1*eval[s->four_count[i][2]];
+                }
+                else
+                {
+                    four_utility = 0;
+                }
+            }
+        }
+
+        if(s->four_sum[i] == 4){
+            end_game = 1;
+        }
+        else if(s->four_sum[i] == -4){
+            end_game = -1;
+        }
+
+        s->four_utility[i] = four_utility;
         s->utility+=four_utility;
      }
+    if (end_game)
+    {
+        s->utility = (end_game * (69000-1));
+    }
 }
 
 int is_terminal(s_state s)
@@ -277,76 +310,113 @@ int utility(s_state s){
     return s.utility;
 }
 
-int min_value(s_state s, int *action){
+int min_value(s_state s, int *action, int *alpha, int *beta, s_state *cs){
     s_state successor;
 
-    int v = 3*3*3*3*69;
-    int current_min = 3*3*3*3*69;
+    int v = MAX;
+    int current_min = MAX;
+    int max_action;
 
-    process_state(&s);
-    //fprintf(stdout, "utility of previous state: %d\n", s.utility);
-    //fprintf(stdout, "min %d\n", counter++);
 
     if (level >= max_level)
     {
+        process_state(&s);
         return utility(s);
     }
 
-    if(!(is_terminal(s) == ACTIVE_GAME))
+    int terminal_status = is_terminal(s);
+    if(terminal_status != ACTIVE_GAME)
     {
-        return	utility(s);
+        process_state(&s);
+        if (terminal_status == P1_WINS){
+            return MAX;
+        }
+        else{
+            if (terminal_status == P2_WINS){
+                return -MAX;
+            }
+            else{
+                return 0;
+            }
+        }
     }
 
     while(successors(&s, min_player, &successor))
     {
         level++;
-        current_min = max_value(successor, action);
+        current_min = max_value(successor, &max_action, alpha, beta, cs);
         level--;
         if(current_min < v)
         {
             v = current_min;
             *action = s.action;
+
+            if(debug)
+                printf("new min: %d (action eh %d)\n", v, s.action -1);
+//            if (v >= *beta)
+            //copy_state(cs, &successor);
+
+            //printf("\nutility %d\n", v);
+            //print_gamefield(successor, level);
+
+ //           if (v >= *alpha)
+ //               return v;
+
         }
+ //       *beta = (v > *beta)? v: *beta;
     }
 
     return	v;
 }
 
-int max_value(s_state s, int *action)
+int max_value(s_state s, int *action, int *alpha, int *beta, s_state *cs)
 {
     s_state successor;
 
-    int v = -3*3*3*3*69;
-    int current_max = -3*3*3*3*69;
-
-    process_state(&s);
-    /*
-    fprintf(stdout, "utility of previous state: %d\n", s.utility);
-    */
-
-    //fprintf(stdout, "max %d\n", counter++);
+    int v = -MAX;
+    int current_max = -MAX;
+    int min_action;
 
     if (level >= max_level)
     {
+        process_state(&s);
         return utility(s);
     }
 
-    if(!(is_terminal(s) == ACTIVE_GAME))
+    int terminal_status = is_terminal(s);
+    if(terminal_status != ACTIVE_GAME)
     {
-        return utility(s);
+        process_state(&s);
+
+        if (terminal_status == DRAW)
+        {
+            return 0;
+        }
+        else
+        {
+            return utility(s);
+        }
     }
 
     while(successors(&s, max_player, &successor))
     {
         level++;
-        current_max = min_value(successor, action);
+        current_max = min_value(successor, &min_action, alpha, beta, cs);
         level--;
         if(current_max > v)
         {
             v = current_max;
             *action = s.action;
-        }
+            //copy_state(cs, &successor);
+            //printf("\nutility %d\n", v);
+            //print_gamefield(successor, level);
 
+            if (debug)
+                printf("new max: %d (action eh %d)\n", v, s.action -1);
+//            if (v >= *beta)
+//                return v;
+        }
+//        *alpha = (v > *alpha)? v: *alpha;
     }
     return	v;
 }
@@ -376,16 +446,40 @@ void print_settings()
     printf("settings your_botid %d\n", your_botid);
 }
 
-void play()
+void play(int mode)
 {
+    int u, action, alpha, beta;
     level = 0;
-    int action;
+
     counter = 0;
-    int u = max_value(state, &action);
+    alpha = -MAX;
+    beta = MAX;
 
-    //fprintf(stdout, "utility: %d\n", u);
+    switch(mode)
+    {
+        case 0:
+        u = max_value(state, &action, &alpha, &beta, &chosen_state);
+        //fprintf(stdout, "utility: %d\n", u);
+        printf("place_disc %d\n", action-1);
+        break;
 
-	printf("place_disc %d\n", action-1);
+        case max_player:
+        u = max_value(state, &action, &alpha, &beta, &chosen_state);
+        printf("col: %d utility: %d\n", action-1, u);
+        place_disk(action-1, max_player);
+        print_is_terminal();
+        break;
+
+        case min_player:
+        u = min_value(state, &action, &alpha, &beta, &chosen_state);
+        printf("col: %d utility: %d\n", action-1, u);
+        place_disk(action-1, min_player);
+        print_is_terminal();
+        break;
+
+        default:
+        printf("invalid play mode\n");
+    }
 }
 
 void print_ascii()
@@ -439,17 +533,18 @@ int successors(s_state *s, t_player p, s_state *successor)
     {
         for(j = 0; j < rows; j++)
         {
-            if(s->s[j][i]==0){
+            if(s->s[j][i] == 0){
                 s->action = i + 1;
                 copy_state(successor, s);
 
-
                 successor->s[j][i] = p;
 
-                /*
-                printf("curr action %d: \n", s->action-1);
-                print_gamefield(*successor);
-                //*/
+                if(debug)
+                {
+                    process_state(successor);
+                    printf("\nutility %d\n", utility(*successor));
+                    print_gamefield(*successor, level);
+                }
 
                 return 1;
             }
@@ -458,13 +553,14 @@ int successors(s_state *s, t_player p, s_state *successor)
     return 0;
 }
 
-void place_disk(col, p)
+void place_disk(int col, t_player p)
 {
     int i;
     for(i = 0; i < rows; i++){
         if(state.s[i][col] == 0){
             state.s[i][col] = p;
-            print_gamefield(state);
+            print_gamefield(state, 0);
+            process_state(&state);
             return;
         }
     }
@@ -498,13 +594,25 @@ int main()
 		/* sscanf(line, "settings field_rows %d", &field_rows); 		*/
 		sscanf(line, "update game round %d", &game_round);
 		if (sscanf(line, "update game field %s", field)) update_gamefield(field);
-		if (sscanf(line, "action move %d", &time_left)) play();
-        if (strcmp(line, "field")==0) print_gamefield(state);
+		if (sscanf(line, "action move %d", &time_left)) play(0);
+        if (strcmp(line, "field")==0) print_gamefield(state, 0);
         if (strcmp(line, "dump")==0) print_settings();
         if (strcmp(line, "ascii")==0) print_ascii();
         if (strcmp(line, "terminal")==0) print_is_terminal();
-        if (strcmp(line, "print4")==0) print_four_array(state);
-        if (sscanf(line, "pd %d %d", &col, &p)) place_disk(col, p);
+
+        if (sscanf(line, "max %d", &col)) { place_disk(col, max_player); print_is_terminal();}
+        if (sscanf(line, "min %d", &col)) { place_disk(col, min_player); print_is_terminal();}
+        if (strcmp(line, "move min")==0) play(min_player);
+        if (strcmp(line, "move max")==0) play(max_player);
+
+        if (strcmp(line, "print4")==0)
+        {
+            print_four_array(state);
+        }
+        if (strcmp(line, "cs")==0)
+        {
+            print_gamefield(chosen_state, 0);
+        }
 	}
 	return 0;
 }
