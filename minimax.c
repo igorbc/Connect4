@@ -7,7 +7,7 @@ const int rows = 6;
 const int columns = 7;
 
 int level = 0;
-int max_level = 6;
+int max_level = 7;
 
 int eval[4] = {1, 10, 100, 1000};
 
@@ -24,6 +24,8 @@ void update_utility(s_state *s);
 void update_four_array(s_state *s);
 void update_is_terminal(s_state *s);
 
+int ab = 1;
+
 int max_value(s_state s, int *action, int alpha, int beta, int *lv){
     s_state successor;
 
@@ -33,8 +35,6 @@ int max_value(s_state s, int *action, int alpha, int beta, int *lv){
     int cur_best_level;
 
     *lv = level;
-
-    //update_state(&s);
 
     if (level >= max_level || s.is_terminal){
         return s.utility;
@@ -46,28 +46,21 @@ int max_value(s_state s, int *action, int alpha, int beta, int *lv){
         level--;
         if(current_max > v || (current_max == v && *lv < cur_best_level)){
 
-            //if( (current_max == v && *lv < cur_best_level) && level == 0)
-            //    printf("level anterior: %d, novo: %d (valor %d)\n",cur_best_level, *lv, current_max);
-
-            cur_best_level = *lv;
             v = current_max;
             *action = s.action;
 
-            //if(level == 0)
-            //    printf("cur best level: %d\n", cur_best_level);
-
-
-            //copy_state(cs, &successor);
-            //printf("\nutility %d\n", v);
-            //print_gamefield(successor, level);
+            cur_best_level = *lv;
 
             if (debug)
                 printf("new max: %d (action eh %d)\n", v, s.action -1);
 
-            //if (v >= beta)
-            //    return v;
+            if (ab)
+                if (v >= beta){
+                    return v;
+                }
         }
-        //alpha = (v > alpha)? v: alpha;
+        if (ab)
+            alpha = (v > alpha)? v: alpha;
     }
     return	v;
 }
@@ -79,8 +72,6 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
     int max_action;
     int cur_best_level;
 
-    //update_state(&s);
-
     *lv = level;
     if (level >= max_level || s.is_terminal){
         return s.utility;
@@ -91,21 +82,20 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
         current_min = max_value(successor, &max_action, alpha, beta, lv);
         level--;
         if(current_min < v || (current_min == v && *lv < cur_best_level)){
-            cur_best_level = *lv;
 
             v = current_min;
             *action = s.action;
 
+            cur_best_level = *lv;
+
             if(debug) printf("new min: %d (action eh %d)\n", v, s.action -1);
-            //copy_state(cs, &successor);
 
-            //printf("\nutility %d\n", v);
-            //print_gamefield(successor, level);
-
-       //     if (v <= alpha)
-       //         return v;
+            if(ab)
+                if (v <= alpha)
+                    return v;
         }
-       // beta = (v < beta)? v: beta;
+        if(ab)
+            beta = (v < beta)? v: beta;
     }
     return	v;
 }
@@ -304,6 +294,13 @@ void update_four_array(s_state *s){
        }
     }
 }
+
+void toggle_alpha_beta(){
+    ab = !ab;
+    if(ab) printf("alpha beta true\n");
+    else printf("alpha beta false\n");
+}
+
 
 void copy_state(s_state *dest, s_state *orig){
     int i, j;

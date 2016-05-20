@@ -13,7 +13,6 @@ int timebank, time_per_move, your_botid, game_round, time_left;
 char line[1000], player_names[1000], your_bot[1000], field[1000];
 
 s_state state;
-s_state chosen_state;
 
 int const PLATFORM = MAC;
 char value_to_char(int value);
@@ -120,6 +119,7 @@ void play(int mode)
 {
     int u, action, alpha, beta;
     level = 0;
+    t_player p;
 
     counter = 0;
     alpha = -MAX;
@@ -127,30 +127,21 @@ void play(int mode)
 
     int lv;
 
-    switch(mode)
-    {
-        case 0:
+    if (mode == 0){
         u = max_value(state, &action, alpha, beta, &lv);
-        //fprintf(stdout, "utility: %d\n", u);
         printf("place_disc %d\n", action-1);
-        break;
+    }
+    else{
+        p = mode;
+        if(p == max_player)
+            u = max_value(state, &action, alpha, beta, &lv);
+        else
+            u = min_value(state, &action, alpha, beta, &lv);
 
-        case max_player:
-        u = max_value(state, &action, alpha, beta, &lv);
-        printf("col: %d utility: %d\n", action-1, u);
-        place_disk(action-1, max_player);
+        printf("col: %d round %d utility: %d\n", action-1, game_round++, u);
+        place_disk(action-1, p);
         print_is_terminal();
-        break;
-
-        case min_player:
-        u = min_value(state, &action, alpha, beta, &lv);
-        printf("col: %d utility: %d\n", action-1, u);
-        place_disk(action-1, min_player);
-        print_is_terminal();
-        break;
-
-        default:
-        printf("invalid play mode\n");
+        printf("\n");
     }
 }
 
@@ -212,6 +203,7 @@ int main(){
         if (strcmp(line, "dump")==0) print_settings();
         if (strcmp(line, "ascii")==0) print_ascii();
         if (strcmp(line, "terminal")==0) print_is_terminal();
+        if (strcmp(line, "toggle ab")==0) toggle_alpha_beta();
 
         if (sscanf(line, "max %d", &col)) { place_disk(col, max_player); print_is_terminal();}
         if (sscanf(line, "min %d", &col)) { place_disk(col, min_player); print_is_terminal();}
@@ -219,7 +211,6 @@ int main(){
         if (strcmp(line, "move max")==0) play(max_player);
 
         if (strcmp(line, "print4")==0) print_four_array(state);
-        if (strcmp(line, "cs")==0) print_gamefield(chosen_state, 0);
 	}
 	return 0;
 }
