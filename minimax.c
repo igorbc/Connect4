@@ -23,8 +23,34 @@ void update_state(s_state *s);
 void update_utility(s_state *s);
 void update_four_array(s_state *s);
 void update_is_terminal(s_state *s);
+inline t_player opposite(t_player p);
 
 int ab = 1;
+
+int minimax_state(s_state s, t_player p){
+    s_state best;
+    best.utility =  (int) opposite(p) * MAX;
+
+    while(successors(&s, p, &best)){
+        //if()
+    }
+    return 0;
+}
+
+inline t_player opposite(t_player p){
+    if(p == max_player)
+        return min_player;
+    return max_player;
+}
+
+inline int is_better(int first, int second, t_player p){
+    if(p == max_player){
+        return (first > second);
+    }
+    else{
+        return (first < second);
+    }
+}
 
 int max_value(s_state s, int *action, int alpha, int beta, int *lv){
     s_state successor;
@@ -100,6 +126,51 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
     return	v;
 }
 
+int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
+    s_state successor;
+
+    int v = (int) opposite(p) * MAX;
+    int current_best = v;
+    int action_aux;
+    int cur_best_level;
+
+    *lv = level;
+
+    if (level >= max_level || s.is_terminal){
+        return s.utility;
+    }
+
+    while(successors(&s, p, &successor)){
+        level++;
+        current_best = minimax(successor, &action_aux, alpha, beta, lv, opposite(p));
+        level--;
+        if(is_better(current_best, v, p) || (current_best == v && *lv < cur_best_level)){
+
+            v = current_best;
+            *action = s.action;
+
+            cur_best_level = *lv;
+
+            if (debug) printf("new max: %d (action eh %d)\n", v, s.action -1);
+
+            if (ab){
+                if(p == max_player){
+                    if (v >= beta) return v;
+                }
+                else{
+                    if (v <= alpha) return v;
+                }
+            }
+        }
+        if (ab){
+            if(p == max_player)
+                alpha = (v > alpha)? v: alpha;
+            else
+                beta = (v < beta)? v: beta;
+        }
+    }
+    return	v;
+}
 
 int successors(s_state *s, t_player p, s_state *successor){
     int i, j;

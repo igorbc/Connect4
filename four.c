@@ -134,9 +134,11 @@ void play(int mode)
     else{
         p = mode;
         if(p == max_player)
-            u = max_value(state, &action, alpha, beta, &lv);
+            //u = max_value(state, &action, alpha, beta, &lv);
+            u = minimax(state, &action, alpha, beta, &lv, p);
         else
-            u = min_value(state, &action, alpha, beta, &lv);
+            //u = min_value(state, &action, alpha, beta, &lv);
+            u = minimax(state, &action, alpha, beta, &lv, p);
 
         printf("col: %d round %d utility: %d\n", action-1, game_round++, u);
         place_disk(action-1, p);

@@ -6,7 +6,9 @@
 #define P2_WINS -1
 #define DRAW 2
 #define ACTIVE_GAME 0
-#define MAX 69000;
+//#define MAX 69000
+
+const int MAX = 69000;
 
 typedef enum {min_player = -1, blank = 0, max_player = 1} t_player;
 
@@ -23,4 +25,5 @@ typedef struct
     int four_utility[69];
     int sum;
     int is_terminal;
+    int level;
 } s_state;
