@@ -1,5 +1,9 @@
 #include <stdio.h>
+#ifndef MINIMAX_C_INCLUDED
+#define MINIMAX_C_INCLUDED
 #include "connect4.h"
+
+
 
 int debug = 0;
 
@@ -11,20 +15,6 @@ int max_level = 8;
 
 int eval[4] = {1, 10, 100, 1000};
 
-int successors(s_state *s, t_player p, s_state *successor);
-int utility(s_state s);
-int is_terminal(s_state s);
-
-int max_value(s_state s, int *action, int alpha, int beta, int *lv);
-int min_value(s_state s, int *action, int alpha, int beta, int *lv);
-void copy_state(s_state *dest, s_state *orig);
-
-void update_state(s_state *s);
-void update_utility(s_state *s);
-void update_four_array(s_state *s);
-void update_is_terminal(s_state *s);
-inline t_player opposite(t_player p);
-
 int ab = 1;
 
 int minimax_state(s_state s, t_player p){
@@ -32,7 +22,7 @@ int minimax_state(s_state s, t_player p){
     best.utility =  (int) opposite(p) * MAX;
 
     while(successors(&s, p, &best)){
-        //if()
+        // if()
     }
     return 0;
 }
@@ -415,3 +405,5 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
     }
     return	v;
 }
+
+#endif
