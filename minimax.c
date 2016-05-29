@@ -7,7 +7,7 @@ const int rows = 6;
 const int columns = 7;
 
 int level = 0;
-int max_level = 7;
+int max_level = 8;
 
 int eval[4] = {1, 10, 100, 1000};
 
@@ -37,13 +37,13 @@ int minimax_state(s_state s, t_player p){
     return 0;
 }
 
-inline t_player opposite(t_player p){
+t_player opposite(t_player p){
     if(p == max_player)
         return min_player;
     return max_player;
 }
 
-inline int is_better(int first, int second, t_player p){
+int is_better(int first, int second, t_player p){
     if(p == max_player){
         return (first > second);
     }
@@ -52,78 +52,27 @@ inline int is_better(int first, int second, t_player p){
     }
 }
 
-int max_value(s_state s, int *action, int alpha, int beta, int *lv){
-    s_state successor;
+int same_utility(int best_utility, int current_utility, int level, int *shallowest, int *deepest, t_player p){
+    if(best_utility != current_utility) return 0;
 
-    int v = -MAX;
-    int current_max = -MAX;
-    int min_action;
-    int cur_best_level;
-
-    *lv = level;
-
-    if (level >= max_level || s.is_terminal){
-        return s.utility;
-    }
-
-    while(successors(&s, max_player, &successor)){
-        level++;
-        current_max = min_value(successor, &min_action, alpha, beta, lv);
-        level--;
-        if(current_max > v || (current_max == v && *lv < cur_best_level)){
-
-            v = current_max;
-            *action = s.action;
-
-            cur_best_level = *lv;
-
-            if (debug)
-                printf("new max: %d (action eh %d)\n", v, s.action -1);
-
-            if (ab)
-                if (v >= beta){
-                    return v;
-                }
-        }
-        if (ab)
-            alpha = (v > alpha)? v: alpha;
-    }
-    return	v;
-}
-
-int min_value(s_state s, int *action, int alpha, int beta, int *lv){
-    s_state successor;
-    int v = MAX;
-    int current_min = MAX;
-    int max_action;
-    int cur_best_level;
-
-    *lv = level;
-    if (level >= max_level || s.is_terminal){
-        return s.utility;
-    }
-
-    while(successors(&s, min_player, &successor)){
-        level++;
-        current_min = max_value(successor, &max_action, alpha, beta, lv);
-        level--;
-        if(current_min < v || (current_min == v && *lv < cur_best_level)){
-
-            v = current_min;
-            *action = s.action;
-
-            cur_best_level = *lv;
-
-            if(debug) printf("new min: %d (action eh %d)\n", v, s.action -1);
-
-            if(ab)
-                if (v <= alpha)
-                    return v;
-        }
-        if(ab)
-            beta = (v < beta)? v: beta;
-    }
-    return	v;
+    //printf("same utility: %d %d. ", best_utility, current_utility);
+	// is losing, get the deepest
+	if((p == max_player && best_utility <= 0) || (p == min_player && best_utility >= 0)){
+		if(*deepest != -1){
+            if(level < max_level) printf(" losing. getting the deepest (%d instead of %d)\n", level, *deepest);
+			*deepest = level;
+			return 1;
+		}
+	}
+	// is winning, get the shallowest
+	else{
+		if(level < *shallowest){
+            if (*shallowest != max_level + 1) printf(" winning. getting the shallowest (%d instead of %d)\n", level, *shallowest);
+			*shallowest = level;
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
@@ -132,7 +81,8 @@ int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
     int v = (int) opposite(p) * MAX;
     int current_best = v;
     int action_aux;
-    int cur_best_level;
+    int deepest_level = -1;
+    int shallowest_level = max_level + 1;
 
     *lv = level;
 
@@ -144,12 +94,11 @@ int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
         level++;
         current_best = minimax(successor, &action_aux, alpha, beta, lv, opposite(p));
         level--;
-        if(is_better(current_best, v, p) || (current_best == v && *lv < cur_best_level)){
+        if(is_better(current_best, v, p) ||
+        	same_utility(v, current_best, *lv, &shallowest_level, &deepest_level, p)){
 
             v = current_best;
             *action = s.action;
-
-            cur_best_level = *lv;
 
             if (debug) printf("new max: %d (action eh %d)\n", v, s.action -1);
 
@@ -390,4 +339,79 @@ void copy_state(s_state *dest, s_state *orig){
         for(j = 0; j < columns; j++)
             dest->s[i][j] = orig->s[i][j];
     }
+}
+
+
+int max_value(s_state s, int *action, int alpha, int beta, int *lv){
+    s_state successor;
+
+    int v = -MAX;
+    int current_max = -MAX;
+    int min_action;
+    int cur_best_level;
+
+    *lv = level;
+
+    if (level >= max_level || s.is_terminal){
+        return s.utility;
+    }
+
+    while(successors(&s, max_player, &successor)){
+        level++;
+        current_max = min_value(successor, &min_action, alpha, beta, lv);
+        level--;
+        if(current_max > v || (current_max == v && *lv < cur_best_level)){
+
+            v = current_max;
+            *action = s.action;
+
+            cur_best_level = *lv;
+
+            if (debug)
+                printf("new max: %d (action eh %d)\n", v, s.action -1);
+
+            if (ab)
+                if (v >= beta){
+                    return v;
+                }
+        }
+        if (ab)
+            alpha = (v > alpha)? v: alpha;
+    }
+    return	v;
+}
+
+int min_value(s_state s, int *action, int alpha, int beta, int *lv){
+    s_state successor;
+    int v = MAX;
+    int current_min = MAX;
+    int max_action;
+    int cur_best_level;
+
+    *lv = level;
+    if (level >= max_level || s.is_terminal){
+        return s.utility;
+    }
+
+    while(successors(&s, min_player, &successor)){
+        level++;
+        current_min = max_value(successor, &max_action, alpha, beta, lv);
+        level--;
+        if(current_min < v || (current_min == v && *lv < cur_best_level)){
+
+            v = current_min;
+            *action = s.action;
+
+            cur_best_level = *lv;
+
+            if(debug) printf("new min: %d (action eh %d)\n", v, s.action -1);
+
+            if(ab)
+                if (v <= alpha)
+                    return v;
+        }
+        if(ab)
+            beta = (v < beta)? v: beta;
+    }
+    return	v;
 }

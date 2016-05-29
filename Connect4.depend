@@ -16,3 +16,16 @@
 	<stdio.h>
 	"connect4.h"
 
+1464214909 source:/Users/igorcorrea/Documents/Connect4/four.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<math.h>
+	"minimax.c"
+
+1464495662 /Users/igorcorrea/Documents/Connect4/minimax.c
+	<stdio.h>
+	"connect4.h"
+
+1464214909 /Users/igorcorrea/Documents/Connect4/connect4.h
+
