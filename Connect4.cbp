@@ -31,16 +31,13 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="connect4.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
 		<Unit filename="four.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="minimax.c">
 			<Option compilerVar="CC" />
-			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
+		<Unit filename="minimax.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

@@ -1,36 +1,49 @@
 #include <stdio.h>
-#ifndef MINIMAX_C_INCLUDED
-#define MINIMAX_C_INCLUDED
-#include "connect4.h"
+#include "minimax.h"
 
 
 
 int debug = 0;
 
-const int rows = 6;
-const int columns = 7;
-
 int level = 0;
-int max_level = 8;
+int max_level = 7;
 
 int eval[4] = {1, 10, 100, 1000};
 
 int ab = 1;
 
-int minimax_state(s_state s, t_player p){
-    s_state best;
-    best.utility =  (int) opposite(p) * MAX;
+const int MAX = 6900;
+const int rows = 6;
+const int columns = 7;
 
-    while(successors(&s, p, &best)){
-        // if()
-    }
-    return 0;
-}
 
-t_player opposite(t_player p){
+extern inline t_player opposite(t_player p){
     if(p == max_player)
         return min_player;
     return max_player;
+}
+
+int minimax_state(s_state s, t_player p){
+    s_state best;
+    int lv;
+    int aux;
+    int best_utility = (int) opposite(p) * MAX;;
+    int alpha = -get_max();
+    int beta = get_max();
+    int u, action;
+    int deepest = -1;
+    int shallowest = max_level + 1;
+    //best.utility =  (int) opposite(p) * MAX;
+
+    while(successors(&s, p, &best)){
+        u = minimax(best, &aux, alpha, beta, &lv, opposite(p));
+        if(is_better(u, best_utility, p) ){// || same_utility(best_utility, u, lv, &shallowest, &deepest, p)){
+            best_utility = u;
+            action = s.action - 1;
+            //printf("utility %d level: %d action %d\n", best_utility, lv, action);
+        }
+    }
+    return action;
 }
 
 int is_better(int first, int second, t_player p){
@@ -43,13 +56,15 @@ int is_better(int first, int second, t_player p){
 }
 
 int same_utility(int best_utility, int current_utility, int level, int *shallowest, int *deepest, t_player p){
+    //return 0;
+
     if(best_utility != current_utility) return 0;
 
     //printf("same utility: %d %d. ", best_utility, current_utility);
 	// is losing, get the deepest
 	if((p == max_player && best_utility <= 0) || (p == min_player && best_utility >= 0)){
 		if(*deepest != -1){
-            if(level < max_level) printf(" losing. getting the deepest (%d instead of %d)\n", level, *deepest);
+            if(level < max_level && debug) printf(" losing. getting the deepest (%d instead of %d)\n", level, *deepest);
 			*deepest = level;
 			return 1;
 		}
@@ -57,7 +72,7 @@ int same_utility(int best_utility, int current_utility, int level, int *shallowe
 	// is winning, get the shallowest
 	else{
 		if(level < *shallowest){
-            if (*shallowest != max_level + 1) printf(" winning. getting the shallowest (%d instead of %d)\n", level, *shallowest);
+            if (*shallowest != max_level + 1 && debug) printf(" winning. getting the shallowest (%d instead of %d)\n", level, *shallowest);
 			*shallowest = level;
 			return 1;
 		}
@@ -65,14 +80,12 @@ int same_utility(int best_utility, int current_utility, int level, int *shallowe
 	return 0;
 }
 
-int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
+extern int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
     s_state successor;
 
     int v = (int) opposite(p) * MAX;
     int current_best = v;
     int action_aux;
-    int deepest_level = -1;
-    int shallowest_level = max_level + 1;
 
     *lv = level;
 
@@ -84,8 +97,7 @@ int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
         level++;
         current_best = minimax(successor, &action_aux, alpha, beta, lv, opposite(p));
         level--;
-        if(is_better(current_best, v, p) ||
-        	same_utility(v, current_best, *lv, &shallowest_level, &deepest_level, p)){
+        if(is_better(current_best, v, p)){
 
             v = current_best;
             *action = s.action;
@@ -197,7 +209,7 @@ void update_utility(s_state *s){
     }
 
     if (end_game){
-        s->utility = (end_game * (69000-1));
+        s->utility = (end_game * (MAX-1));
         if(end_game > 0)
             s->is_terminal = P1_WINS;
         else
@@ -406,4 +418,18 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
     return	v;
 }
 
-#endif
+
+void set_level(int l){
+    level = l;
+}
+
+
+int get_max(){
+    return MAX;
+}
+int get_rows(){
+    return rows;
+}
+int get_columns(){
+    return columns;
+}

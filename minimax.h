@@ -8,7 +8,6 @@
 #define ACTIVE_GAME 0
 //#define MAX 69000
 
-const int MAX = 69000;
 
 typedef enum {min_player = -1, blank = 0, max_player = 1} t_player;
 
@@ -29,8 +28,9 @@ typedef struct
 } s_state;
 
 
-int minimax_state(s_state s, t_player p);
 t_player opposite(t_player p);
+int minimax_state(s_state s, t_player p);
+
 int is_better(int first, int second, t_player p);
 int same_utility(int best_utility, int current_utility, int level, int *shallowest, int *deepest, t_player p);
 int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p);
@@ -50,8 +50,11 @@ int max_value(s_state s, int *action, int alpha, int beta, int *lv);
 int min_value(s_state s, int *action, int alpha, int beta, int *lv);
 void copy_state(s_state *dest, s_state *orig);
 
+void set_level(int l);
 
-
+int get_max();
+int get_rows();
+int get_columns();
 
 
 #endif // CONNECT4_H_INCLUDED
