@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <sys/time.h>
 #include "minimax.h"
 
 int debug = 0;
@@ -13,6 +14,7 @@ int ab = 1;
 const int MAX = 6900;
 const int rows = 6;
 const int columns = 7;
+long int time_to_spend;
 
 t_player opposite(t_player p){
     if(p == max_player)
@@ -20,26 +22,64 @@ t_player opposite(t_player p){
     return max_player;
 }
 
-int minimax_action(s_state s, t_player p, int *utility, int game_round){
+long get_time_diff(struct timeval tval_before, struct timeval tval_after){
+    return (long)((tval_after.tv_sec - tval_before.tv_sec)*1000000 + (tval_after.tv_usec - tval_before.tv_usec))/1000;
+}
+
+int minimax_action(s_state s, t_player p, int *utility, int game_round, int *timebank){
     s_state best;
     int lv;
-    int best_utility = (int) opposite(p) * MAX;;
-    int alpha = -get_max();
-    int beta = get_max();
+    int best_utility;
+    int alpha, beta;
     int current_utility, action;
+    int shallowest;
+    int time_up;
 
-    int shallowest = max_level + 1;
+    struct timeval tval_before, tval_after;
 
-    if(game_round > 20) max_level = 10;
+    max_level = 5;
 
-    while(successors(&s, p, &best)){
-        current_utility = minimax(best, alpha, beta, &lv, opposite(p));
-        if(is_better(current_utility, best_utility, p) || close_the_deal(best_utility, current_utility, lv, &shallowest, p)){
-            best_utility = current_utility;
-            action = s.action - 1;
-        }
+    action = 2;
+
+    if(game_round > 2){
+        time_to_spend = (*timebank) < 1500? *timebank: 1500;
     }
-    *utility = best_utility;
+    else {
+        time_to_spend = 800;
+    }
+
+    *timebank -= time_to_spend;
+    while(time_to_spend > 0){
+        gettimeofday(&tval_before, NULL);
+
+        s.action = 0;
+
+        best_utility = (int) opposite(p) * MAX;;
+        alpha = -get_max();
+        beta = get_max();
+        shallowest = max_level + 1;
+
+        //if(game_round > 20) max_level = 10;
+        time_up = 0;
+        while(successors(&s, p, &best)){
+            current_utility = minimax(best, alpha, beta, &lv, opposite(p), &time_up);
+            if(!time_up){
+                if(is_better(current_utility, best_utility, p) || close_the_deal(best_utility, current_utility, lv, &shallowest, p)){
+                    best_utility = current_utility;
+                    action = s.action - 1;
+                }
+            }
+        }
+        *utility = best_utility;
+        max_level++;
+
+        gettimeofday(&tval_after, NULL);
+        time_to_spend-= get_time_diff(tval_before, tval_after);
+
+     //   printf("current level: %d time_to_spend: %ld\n", max_level, time_to_spend);
+    }
+    //printf("max level: %d time_to_spend: %ld\n", max_level, time_to_spend);
+    *timebank += time_to_spend;
     return action;
 }
 
@@ -88,21 +128,31 @@ int same_utility(int best_utility, int current_utility, int level, int *shallowe
 	return 0;
 }
 
-int minimax(s_state s, int alpha, int beta, int *lv, t_player p){
+int minimax(s_state s, int alpha, int beta, int *lv, t_player p, int *time_up){
     s_state successor;
+    struct timeval tval_before, tval_after;
+
+    gettimeofday(&tval_before, NULL);
 
     int v = (int) opposite(p) * MAX;
     int current_best = v;
 
     *lv = level;
 
+    if(time_to_spend <= 0){
+        *time_up = 1;
+        return v;
+    }
+
     if (level >= max_level || s.is_terminal){
+        gettimeofday(&tval_after, NULL);
+        time_to_spend-= get_time_diff(tval_before, tval_after);
         return s.utility;
     }
 
     while(successors(&s, p, &successor)){
         level++;
-        current_best = minimax(successor, alpha, beta, lv, opposite(p));
+        current_best = minimax(successor, alpha, beta, lv, opposite(p), time_up);
         level--;
         if(is_better(current_best, v, p)){
 
@@ -112,10 +162,18 @@ int minimax(s_state s, int alpha, int beta, int *lv, t_player p){
 
             if (ab){
                 if(p == max_player){
-                    if (v >= beta) return v;
+                    if (v >= beta) {
+                        gettimeofday(&tval_after, NULL);
+                        time_to_spend-= get_time_diff(tval_before, tval_after);
+                        return v;
+                    }
                 }
                 else{
-                    if (v <= alpha) return v;
+                    if (v <= alpha){
+                        gettimeofday(&tval_after, NULL);
+                        time_to_spend-= get_time_diff(tval_before, tval_after);
+                        return v;
+                    }
                 }
             }
         }
@@ -126,7 +184,9 @@ int minimax(s_state s, int alpha, int beta, int *lv, t_player p){
                 beta = (v < beta)? v: beta;
         }
     }
-    return	v;
+    gettimeofday(&tval_after, NULL);
+    time_to_spend-= get_time_diff(tval_before, tval_after);
+    return v;
 }
 
 int successors(s_state *s, t_player p, s_state *successor){

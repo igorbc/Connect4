@@ -2,6 +2,8 @@
 #include<stdlib.h>
 #include<string.h>
 #include<math.h>
+#include<sys/time.h>
+#include<time.h>
 #include "minimax.h"
 
 #define WIN 0
@@ -108,6 +110,25 @@ void update_gamefield(char field[])
 
 void print_settings()
 {
+//*
+    struct timeval tval_before, tval_after;
+    int i, j;
+    float a = 134, b = 32;
+
+    gettimeofday(&tval_before, NULL);
+
+    for(i = 0; i < 100000; i++){
+        for(j = 0; j < 10000; j++){
+            a = (a / b) + 12;
+        }
+    }
+
+    gettimeofday(&tval_after, NULL);
+    long usec_diff = (long)((tval_after.tv_sec - tval_before.tv_sec)*1000000 + (tval_after.tv_usec - tval_before.tv_usec))/1000;
+    printf("time elapsed: %ld\n", usec_diff);
+
+//*/
+
     printf("settings timebank %d\n", timebank);
     printf("settings time_per_move %d\n", time_per_move);
     printf("settings player_names %s\n", player_names);
@@ -118,26 +139,38 @@ void print_settings()
 void play(int mode)
 {
     int u = 0, action;
+    int p_timebank[3];
 
     set_level(0);
     t_player p;
 
     counter = 0;
 
+    p_timebank[max_player] = timebank;
+    p_timebank[min_player] = timebank;
+
     if (mode == 0){
-        action = minimax_action(state, max_player, &u, game_round);
+        action = minimax_action(state, max_player, &u, game_round, &timebank);
 
         printf("place_disc %d\n", action);
+        timebank += time_per_move;
     }
     else{
         p = mode;
-        action = minimax_action(state, p, &u, game_round);
+        action = minimax_action(state, p, &u, game_round, &p_timebank[p]);
+        p_timebank[p] += time_per_move;
 
         printf("col: %d round %d utility: %d\n", action, game_round++, u);
         place_disk(action, p);
+
+        printf("timebank: %d\n",  p_timebank[p]);
         print_is_terminal();
+
         printf("\n");
     }
+
+
+
 }
 
 void initialize_settings()

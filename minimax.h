@@ -27,12 +27,12 @@ typedef struct
 
 
 t_player opposite(t_player p);
-int minimax_action(s_state s, t_player p, int *utility, int game_round);
+int minimax_action(s_state s, t_player p, int *utility, int game_round, int *timebank);
 
 int is_better(int first, int second, t_player p);
 int close_the_deal(int best_utility, int current_utility, int level, int *shallowest, t_player p);
 int same_utility(int best_utility, int current_utility, int level, int *shallowest, int *deepest, t_player p);
-int minimax(s_state s, int alpha, int beta, int *lv, t_player p);
+int minimax(s_state s, int alpha, int beta, int *lv, t_player p, int *time_up);
 int successors(s_state *s, t_player p, s_state *successor);
 
 void update_state(s_state *s);
