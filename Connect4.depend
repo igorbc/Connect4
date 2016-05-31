@@ -1,10 +1,10 @@
 # depslib dependency file v1.0
-1464207540 source:c:\users\igor\documents\github\connect4\four.c
+1464650618 source:c:\users\igor\documents\github\connect4\four.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	<math.h>
-	"minimax.c"
+	"minimax.h"
 
 1464209306 c:\users\igor\documents\github\connect4\minimax.c
 	<stdio.h>
@@ -12,9 +12,9 @@
 
 1464208875 c:\users\igor\documents\github\connect4\connect4.h
 
-1463694247 source:c:\users\igor\documents\github\connect4\minimax.c
+1464651063 source:c:\users\igor\documents\github\connect4\minimax.c
 	<stdio.h>
-	"connect4.h"
+	"minimax.h"
 
 1464508177 source:/Users/igorcorrea/Documents/Connect4/four.c
 	<stdio.h>
@@ -34,4 +34,8 @@
 1464506613 source:/Users/igorcorrea/Documents/Connect4/minimax.c
 	<stdio.h>
 	"minimax.h"
+
+1464650589 c:\users\igor\documents\github\connect4\minimax.h
+
+1464636313 source:c:\users\igor\documents\github\connect4\minimax.h
 

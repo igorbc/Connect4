@@ -3,7 +3,6 @@
 #include<string.h>
 #include<math.h>
 #include "minimax.h"
-//#include "connect4.h"
 
 #define WIN 0
 #define MAC 1
@@ -118,41 +117,27 @@ void print_settings()
 
 void play(int mode)
 {
-    int u = 0, action, alpha, beta;
+    int u = 0, action;
+
     set_level(0);
     t_player p;
 
     counter = 0;
-    alpha = -get_max();
-    beta = get_max();
-
-    int lv;
 
     if (mode == 0){
-        //u = minimax(state, &action, alpha, beta, &lv, max_player);
-        //action = action - 1;
-        action = minimax_state(state, max_player);
+        action = minimax_action(state, max_player, &u, game_round);
 
         printf("place_disc %d\n", action);
     }
     else{
         p = mode;
-        action = minimax_state(state, p);
-        //u = minimax(state, &action, alpha, beta, &lv, p);
-        //action = action -1;
+        action = minimax_action(state, p, &u, game_round);
 
         printf("col: %d round %d utility: %d\n", action, game_round++, u);
         place_disk(action, p);
         print_is_terminal();
         printf("\n");
     }
-}
-
-void print_ascii()
-{
-    int i;
-    for(i = 0; i < 256; i++)
-    	printf("%c %d\n", (char)i, i);
 }
 
 void initialize_settings()
@@ -204,7 +189,6 @@ int main(){
 		if (sscanf(line, "action move %d", &time_left)) play(0);
         if (strcmp(line, "field")==0) print_gamefield(state, 0);
         if (strcmp(line, "dump")==0) print_settings();
-        if (strcmp(line, "ascii")==0) print_ascii();
         if (strcmp(line, "terminal")==0) print_is_terminal();
         if (strcmp(line, "toggle ab")==0) toggle_alpha_beta();
 

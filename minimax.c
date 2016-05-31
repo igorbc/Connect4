@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "minimax.h"
 
-
-
 int debug = 0;
 
 int level = 0;
@@ -16,33 +14,32 @@ const int MAX = 6900;
 const int rows = 6;
 const int columns = 7;
 
-
-extern inline t_player opposite(t_player p){
+t_player opposite(t_player p){
     if(p == max_player)
         return min_player;
     return max_player;
 }
 
-int minimax_state(s_state s, t_player p){
+int minimax_action(s_state s, t_player p, int *utility, int game_round){
     s_state best;
     int lv;
-    int aux;
     int best_utility = (int) opposite(p) * MAX;;
     int alpha = -get_max();
     int beta = get_max();
-    int u, action;
-    int deepest = -1;
+    int current_utility, action;
+
     int shallowest = max_level + 1;
-    //best.utility =  (int) opposite(p) * MAX;
+
+    if(game_round > 20) max_level = 10;
 
     while(successors(&s, p, &best)){
-        u = minimax(best, &aux, alpha, beta, &lv, opposite(p));
-        if(is_better(u, best_utility, p) ){// || same_utility(best_utility, u, lv, &shallowest, &deepest, p)){
-            best_utility = u;
+        current_utility = minimax(best, alpha, beta, &lv, opposite(p));
+        if(is_better(current_utility, best_utility, p) || close_the_deal(best_utility, current_utility, lv, &shallowest, p)){
+            best_utility = current_utility;
             action = s.action - 1;
-            //printf("utility %d level: %d action %d\n", best_utility, lv, action);
         }
     }
+    *utility = best_utility;
     return action;
 }
 
@@ -55,12 +52,23 @@ int is_better(int first, int second, t_player p){
     }
 }
 
+int close_the_deal(int best_utility, int current_utility, int level, int *shallowest, t_player p){
+    if(best_utility != current_utility) return 0;
+
+    if(level < *shallowest){
+        if (*shallowest != max_level + 1 && debug) printf(" winning. getting the shallowest (%d instead of %d)\n", level, *shallowest);
+		*shallowest = level;
+		return 1;
+	}
+
+	return 0;
+}
+
+// not used
 int same_utility(int best_utility, int current_utility, int level, int *shallowest, int *deepest, t_player p){
-    //return 0;
 
     if(best_utility != current_utility) return 0;
 
-    //printf("same utility: %d %d. ", best_utility, current_utility);
 	// is losing, get the deepest
 	if((p == max_player && best_utility <= 0) || (p == min_player && best_utility >= 0)){
 		if(*deepest != -1){
@@ -80,12 +88,11 @@ int same_utility(int best_utility, int current_utility, int level, int *shallowe
 	return 0;
 }
 
-extern int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p){
+int minimax(s_state s, int alpha, int beta, int *lv, t_player p){
     s_state successor;
 
     int v = (int) opposite(p) * MAX;
     int current_best = v;
-    int action_aux;
 
     *lv = level;
 
@@ -95,12 +102,11 @@ extern int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_playe
 
     while(successors(&s, p, &successor)){
         level++;
-        current_best = minimax(successor, &action_aux, alpha, beta, lv, opposite(p));
+        current_best = minimax(successor, alpha, beta, lv, opposite(p));
         level--;
         if(is_better(current_best, v, p)){
 
             v = current_best;
-            *action = s.action;
 
             if (debug) printf("new max: %d (action eh %d)\n", v, s.action -1);
 
@@ -127,8 +133,6 @@ int successors(s_state *s, t_player p, s_state *successor){
     int i, j;
     if((s->action) == columns) return 0;
 
-//    fprintf(stdout, "level %d successor\n", level);
-
     for(i = s->action; i < columns; i++){
         for(j = 0; j < rows; j++){
             if(s->s[j][i] == 0){
@@ -141,7 +145,6 @@ int successors(s_state *s, t_player p, s_state *successor){
 
                 if(debug){
                     printf("\nutility %d\n", successor->utility);
-                    //print_gamefield(*successor, level);
                 }
 
                 return 1;
@@ -229,16 +232,13 @@ void update_utility(s_state *s){
             s->utility = 0;
         }
     }
-
-//    printf("u: %d\n", s->utility);
 }
-
 
 void update_four_array(s_state *s){
     int fa_count = 0, i, j;
     int sum;
     int (*fa)[4];
-    s->sum = 0;
+
     fa = s->four_array;
 
     for(i = 0; i < rows; i++){  /* groups of 4 in rows*/
@@ -249,7 +249,6 @@ void update_four_array(s_state *s){
             sum += fa[fa_count][2] = s->s[i][j+2];
             sum += fa[fa_count][3] = s->s[i][j+3];
             s->four_sum[fa_count] = sum;
-            s->sum+= sum;
             fa_count++;
         }
     }
@@ -262,7 +261,6 @@ void update_four_array(s_state *s){
             sum += fa[fa_count][2] = s->s[j+2][i];
             sum += fa[fa_count][3] = s->s[j+3][i];
             s->four_sum[fa_count] = sum;
-            s->sum+= sum;
 
             fa_count++;
         }
@@ -290,7 +288,6 @@ void update_four_array(s_state *s){
            sum += fa[fa_count][2] = s->s[i+2][j+2];
            sum += fa[fa_count][3] = s->s[i+3][j+3];
            s->four_sum[fa_count] = sum;
-           s->sum+= sum;
 
            fa_count++;
        }
@@ -310,7 +307,6 @@ void update_four_array(s_state *s){
            sum += fa[fa_count][2] = s->s[i-2][j+2];
            sum += fa[fa_count][3] = s->s[i-3][j+3];
            s->four_sum[fa_count] = sum;
-           s->sum+= sum;
 
            fa_count++;
        }
@@ -422,7 +418,6 @@ int min_value(s_state s, int *action, int alpha, int beta, int *lv){
 void set_level(int l){
     level = l;
 }
-
 
 int get_max(){
     return MAX;

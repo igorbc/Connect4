@@ -22,20 +22,18 @@ typedef struct
     int four_count[69][3];
     int four_sum[69];
     int four_utility[69];
-    int sum;
     int is_terminal;
-    int level;
 } s_state;
 
 
 t_player opposite(t_player p);
-int minimax_state(s_state s, t_player p);
+int minimax_action(s_state s, t_player p, int *utility, int game_round);
 
 int is_better(int first, int second, t_player p);
+int close_the_deal(int best_utility, int current_utility, int level, int *shallowest, t_player p);
 int same_utility(int best_utility, int current_utility, int level, int *shallowest, int *deepest, t_player p);
-int minimax(s_state s, int *action, int alpha, int beta, int *lv, t_player p);
+int minimax(s_state s, int alpha, int beta, int *lv, t_player p);
 int successors(s_state *s, t_player p, s_state *successor);
-
 
 void update_state(s_state *s);
 void update_utility(s_state *s);
@@ -44,7 +42,6 @@ void update_four_array(s_state *s);
 void toggle_alpha_beta();
 
 void copy_state(s_state *dest, s_state *orig);
-
 
 int max_value(s_state s, int *action, int alpha, int beta, int *lv);
 int min_value(s_state s, int *action, int alpha, int beta, int *lv);
@@ -55,6 +52,5 @@ void set_level(int l);
 int get_max();
 int get_rows();
 int get_columns();
-
 
 #endif // CONNECT4_H_INCLUDED

@@ -37,7 +37,9 @@
 		<Unit filename="minimax.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="minimax.h" />
+		<Unit filename="minimax.h">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Extensions>
 			<code_completion />
 			<envvars />
